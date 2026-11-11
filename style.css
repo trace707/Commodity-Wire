@@ -1,0 +1,62 @@
+:root{
+  --bg:#05070c; --panel:#131a2b; --panel-head:#19223a; --line:#232e49; --text:#eef1f7;
+  --dim:#7f8aa3; --dimmer:#56617a; --accent:#ff2d6f; --accent-bg:#2a1326; --data:#4cc2ff; --report:#ffb020;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 var(--sans);display:flex;flex-direction:column}
+button{font:inherit;color:inherit}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px 8px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+h1{margin:0;font:600 13px var(--mono);letter-spacing:.18em;text-transform:uppercase}
+.status{font:12px var(--mono);color:var(--dim);white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--dimmer);flex:none}
+.dot.live{background:var(--accent);box-shadow:0 0 0 4px rgba(255,45,111,.18);animation:pulse 2s infinite}
+.dot.stale{background:var(--report)}
+@keyframes pulse{50%{box-shadow:0 0 0 7px rgba(255,45,111,0)}}
+.controls{display:flex;gap:6px;flex-wrap:wrap}
+.btn{background:transparent;border:1px solid var(--line);border-radius:5px;padding:5px 10px;font-size:12.5px;color:var(--dim);cursor:pointer}
+.btn:hover{color:var(--text);border-color:#3a4a72}
+.btn[aria-pressed=true]{color:var(--text);border-color:var(--accent);background:var(--accent-bg)}
+.btn:focus-visible,.chip:focus-visible,a:focus-visible{outline:2px solid var(--data);outline-offset:2px}
+
+.chips{display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;background:transparent;border:1px solid var(--line);border-radius:99px;padding:3px 11px;font:11.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dimmer);cursor:pointer}
+.chip[aria-pressed=true]{color:var(--text);background:var(--panel)}
+.chip b{font-weight:600;color:var(--accent);margin-left:5px}
+
+/* the board: one column per market, each scrolls on its own */
+.board{flex:1;min-height:0;display:flex;gap:12px;padding:0 16px 10px;overflow-x:auto;scroll-snap-type:x proximity}
+.col{flex:0 0 370px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;scroll-snap-align:start;min-height:0}
+.col-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--panel-head);border-bottom:1px solid var(--line);font:11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.col-head strong{color:var(--text);font-weight:600}
+.sched{padding:8px 14px;border-bottom:1px solid var(--line);font:11.5px/1.6 var(--mono);color:var(--dim)}
+.sched div{display:flex;justify-content:space-between;gap:10px}
+.sched span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sched time{color:var(--dimmer);white-space:nowrap}
+.sched .soon{color:var(--report)} .sched .soon time{color:var(--report)}
+.list{flex:1;overflow-y:auto;margin:0;padding:0;list-style:none;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.row{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:10px 14px 10px 11px;border-left:3px solid transparent;border-bottom:1px solid rgba(35,46,73,.55)}
+.row time{font:11.5px/1.9 var(--mono);color:var(--dim);white-space:nowrap}
+.row a{color:var(--text);text-decoration:none;overflow-wrap:anywhere}
+.row a:hover{text-decoration:underline}
+.row .meta{grid-column:2;font:11px var(--mono);color:var(--dimmer)}
+.tag{font:600 10px var(--mono);letter-spacing:.08em;padding:1px 5px;border-radius:3px;margin-right:6px;vertical-align:1px}
+.tag.REPORT{color:#1a1200;background:var(--report)} .tag.DATA{color:#001520;background:var(--data)}
+.row.hot{border-left-color:var(--accent);background:linear-gradient(90deg,var(--accent-bg),transparent 70%)}
+.row.hot a{font-weight:600}
+.row.new{animation:flash 6s ease-out}
+@keyframes flash{0%,35%{background-color:rgba(255,45,111,.32)}100%{background-color:transparent}}
+.empty{padding:22px 14px;color:var(--dimmer);font:12px var(--mono)}
+.foot{padding:0 16px 10px;font-size:11px;color:var(--dimmer)}
+
+@media (max-width:640px){
+  .col{flex-basis:calc(100vw - 44px)}
+  .board{scroll-snap-type:x mandatory}
+  .foot{display:none}
+}
+@media (prefers-reduced-motion:reduce){.row.new,.dot.live{animation:none}}

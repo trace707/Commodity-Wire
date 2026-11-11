@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commodity Wire</title>
+<meta name="description" content="Live commodity headlines by market: grains, metals, energy and livestock.">
+<link rel="stylesheet" href="style.css">
+<script>
+  // Leave blank to auto-detect on GitHub Pages (https://OWNER.github.io/REPO/).
+  // Set these only if you serve the site from a custom domain.
+  window.WIRE_CONFIG = { owner: "", repo: "", branch: "data" };
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span id="dot" class="dot"></span><h1>Commodity Wire</h1><span id="status" class="status">connecting…</span></div>
+  <div class="controls">
+    <button id="hotOnly" class="btn" aria-pressed="false" title="Show only highlighted headlines">Important only</button>
+    <button id="sound" class="btn" aria-pressed="false" title="Beep when an important headline lands">Sound</button>
+    <button id="notify" class="btn" aria-pressed="false" title="Desktop notification when an important headline lands">Alerts</button>
+    <button id="tz" class="btn" title="Switch between US Eastern and your local time">ET</button>
+  </div>
+</header>
+<nav id="chips" class="chips" aria-label="Show or hide markets"></nav>
+<main id="board" class="board"></main>
+<footer class="foot">Headlines link to their original publishers and are gathered from public news search feeds. Release times are the usual schedule in US Eastern time and shift in holiday weeks. Not investment advice.</footer>
+<script src="app.js"></script>
+</body>
+</html>

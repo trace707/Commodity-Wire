@@ -1,0 +1,66 @@
+name: Headline feed
+
+# Keeps data/headlines.json fresh on the `data` branch, which the site reads.
+#
+# GitHub will not start a scheduled workflow more often than every 5 minutes
+# (and is often late), so instead of one short run per fetch, each run stays
+# alive for ~55 minutes and fetches once a minute. The schedule just makes sure
+# a new run is always queued to take over when the current one ends.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["scripts/**", ".github/workflows/wire.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wire
+  cancel-in-progress: false   # the next run waits its turn instead of overlapping
+
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Restore the current board
+        run: |
+          mkdir -p out
+          cd out
+          git init -q -b data
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          if git fetch -q --depth 1 origin data 2>/dev/null; then
+            git checkout -q FETCH_HEAD -- headlines.json || true
+          fi
+
+      - name: Fetch every minute
+        env:
+          WIRE_OUT: out/headlines.json
+        run: |
+          cd out
+          git config user.name "wire-bot"
+          git config user.email "wire-bot@users.noreply.github.com"
+          cd ..
+          first="--all"
+          end=$((SECONDS + 55 * 60))
+          while [ $SECONDS -lt $end ]; do
+            started=$SECONDS
+            node scripts/fetch.mjs $first || echo "fetch failed, will retry"
+            first=""
+            if [ -n "$(git -C out status --porcelain)" ]; then
+              # one commit, replaced each time: the branch never grows
+              git -C out add headlines.json
+              git -C out commit -q --allow-empty-message -m "headlines $(date -u +%FT%TZ)" $(git -C out rev-parse -q --verify HEAD >/dev/null && echo --amend)
+              git -C out push -q -f origin HEAD:data || echo "push failed, will retry"
+            fi
+            wait=$((60 - (SECONDS - started)))
+            [ $wait -gt 0 ] && sleep $wait
+          done
