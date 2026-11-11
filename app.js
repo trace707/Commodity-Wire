@@ -44,6 +44,7 @@
   };
   const state = {
     data: null, seen: null, unread: 0,
+    alertUntil: {},   // market -> time its chip and column header stop flashing
     hidden: new Set(store.get("hidden", [])),
     hotOnly: store.get("hotOnly", false), sound: store.get("sound", false),
     notify: store.get("notify", false) && "Notification" in window && Notification.permission === "granted",
@@ -77,11 +78,12 @@
   const zone = () => (state.et ? "America/New_York" : undefined);
   const fmtRow = (ts) => {
     const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
-      timeZone: zone(), day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false,
+      timeZone: zone(), day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
     }).formatToParts(ts).map((x) => [x.type, x.value]));
-    return `${p.day} ${p.month} · ${p.hour}:${p.minute}`;
+    return `${p.day} ${p.month} · ${p.hour}:${p.minute} ${p.dayPeriod.toUpperCase()}`;
   };
-  const fmtClock = (ts) => new Intl.DateTimeFormat("en-GB", { timeZone: zone(), hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(ts);
+  const fmtClock = (ts) => new Intl.DateTimeFormat("en-US", { timeZone: zone(), hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true }).format(ts);
+  const to12 = (t) => { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
   const tzLabel = () => state.et ? "ET" : (new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value || "Local");
 
   // Next occurrences of the recurring releases, worked out on the Eastern wall clock.
@@ -108,17 +110,19 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(u) ? u : "#");
 
+  const FLASH_MS = 60e3;
+  const flashing = (k) => (state.alertUntil[k] || 0) > Date.now();
   function renderChips() {
     $("chips").innerHTML = MARKETS.map(([k, name]) => {
       const hot = (state.data?.commodities?.[k] || []).filter((h) => h.hot && Date.now() - h.ts < 3600e3).length;
-      return `<button class="chip" data-k="${k}" aria-pressed="${!state.hidden.has(k)}" title="Show or hide ${name}">${name}${hot ? `<b>${hot}</b>` : ""}</button>`;
+      return `<button class="chip${flashing(k) ? " alert" : ""}" data-k="${k}" aria-pressed="${!state.hidden.has(k)}" title="Show or hide ${name}">${name}${hot ? `<b>${hot}</b>` : ""}</button>`;
     }).join("");
   }
   function renderSchedule() {
     for (const [k] of MARKETS) {
       const el = document.querySelector(`.col[data-k="${k}"] .sched`);
       if (el) el.innerHTML = upcoming(k).map((u) =>
-        `<div class="${u.inMin <= 30 ? "soon" : ""}"><span>${esc(u.n)}</span><time>${u.day} ${u.t} ET · ${fmtIn(u.inMin)}</time></div>`).join("");
+        `<div class="${u.inMin <= 30 ? "soon" : ""}"><span>${esc(u.n)}</span><time>${u.day} ${to12(u.t)} ET · ${fmtIn(u.inMin)}</time></div>`).join("");
     }
   }
   function render(fresh = new Set()) {
@@ -134,7 +138,7 @@
           ${h.src ? `<span class="meta">${esc(h.src)}</span>` : ""}
         </li>`).join("");
       return `<section class="col" data-k="${k}" aria-label="${name} headlines">
-        <div class="col-head"><span>Headlines · <strong>${name}</strong></span><span>${tzLabel()}</span></div>
+        <div class="col-head${flashing(k) ? " alert" : ""}"><span>Headlines · <strong>${name}</strong></span><span>${tzLabel()}</span></div>
         <div class="sched"></div>
         <ul class="list">${rows || `<li class="empty">${state.data ? "No headlines in the last 72 hours." : "Loading…"}</li>`}</ul>
       </section>`;
@@ -183,10 +187,11 @@
       const ids = new Set(), fresh = new Set(), newHot = [];
       for (const [k, name] of MARKETS) for (const h of data.commodities?.[k] || []) {
         ids.add(h.id);
-        if (state.seen && !state.seen.has(h.id)) { fresh.add(h.id); if (h.hot && !state.hidden.has(k)) newHot.push([name, h]); }
+        if (state.seen && !state.seen.has(h.id)) { fresh.add(h.id); if (h.hot) { state.alertUntil[k] = Date.now() + FLASH_MS; if (!state.hidden.has(k)) newHot.push([name, h]); } }
       }
       state.data = data; state.seen = ids;
       render(fresh); renderStatus(); alertFor(newHot);
+      if (fresh.size) setTimeout(render, FLASH_MS + 500);   // clear the flashing once it has run its course
     } catch {
       $("dot").className = "dot stale";
       $("status").textContent = state.data ? "connection lost · retrying" : "no data yet · waiting for the first feed run";

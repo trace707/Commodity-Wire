@@ -27,6 +27,9 @@ h1{margin:0;font:600 13px var(--mono);letter-spacing:.18em;text-transform:upperc
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;background:transparent;border:1px solid var(--line);border-radius:99px;padding:3px 11px;font:11.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dimmer);cursor:pointer}
 .chip[aria-pressed=true]{color:var(--text);background:var(--panel)}
+.chip.alert,.col-head.alert{animation:alarm 1s steps(2,jump-none) infinite}
+@keyframes alarm{0%{background:var(--accent);color:#fff;border-color:var(--accent)}100%{background:var(--accent-bg);color:#fff;border-color:var(--accent)}}
+.chip.alert b,.col-head.alert strong{color:#fff}
 .chip b{font-weight:600;color:var(--accent);margin-left:5px}
 
 /* the board: one column per market, each scrolls on its own */
@@ -41,7 +44,7 @@ h1{margin:0;font:600 13px var(--mono);letter-spacing:.18em;text-transform:upperc
 .sched .soon{color:var(--report)} .sched .soon time{color:var(--report)}
 .list{flex:1;overflow-y:auto;margin:0;padding:0;list-style:none;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 .row{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:10px 14px 10px 11px;border-left:3px solid transparent;border-bottom:1px solid rgba(35,46,73,.55)}
-.row time{font:11.5px/1.9 var(--mono);color:var(--dim);white-space:nowrap}
+.row time{min-width:17ch;font:11px/1.95 var(--mono);color:var(--dim);white-space:nowrap}
 .row a{color:var(--text);text-decoration:none;overflow-wrap:anywhere}
 .row a:hover{text-decoration:underline}
 .row .meta{grid-column:2;font:11px var(--mono);color:var(--dimmer)}
@@ -59,4 +62,4 @@ h1{margin:0;font:600 13px var(--mono);letter-spacing:.18em;text-transform:upperc
   .board{scroll-snap-type:x mandatory}
   .foot{display:none}
 }
-@media (prefers-reduced-motion:reduce){.row.new,.dot.live{animation:none}}
+@media (prefers-reduced-motion:reduce){.row.new,.dot.live{animation:none}.chip.alert,.col-head.alert{animation:none;background:var(--accent);color:#fff;border-color:var(--accent)}}
