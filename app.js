@@ -44,7 +44,7 @@
   };
   const state = {
     data: null, seen: null, unread: 0,
-    alertUntil: {},   // market -> time its chip and column header stop flashing
+    alerts: new Set(),   // markets whose chip and column header flash until clicked
     hidden: new Set(store.get("hidden", [])),
     hotOnly: store.get("hotOnly", false), sound: store.get("sound", false),
     notify: store.get("notify", false) && "Notification" in window && Notification.permission === "granted",
@@ -110,12 +110,11 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(u) ? u : "#");
 
-  const FLASH_MS = 60e3;
-  const flashing = (k) => (state.alertUntil[k] || 0) > Date.now();
+  const flashing = (k) => state.alerts.has(k);
   function renderChips() {
     $("chips").innerHTML = MARKETS.map(([k, name]) => {
       const hot = (state.data?.commodities?.[k] || []).filter((h) => h.hot && Date.now() - h.ts < 3600e3).length;
-      return `<button class="chip${flashing(k) ? " alert" : ""}" data-k="${k}" aria-pressed="${!state.hidden.has(k)}" title="Show or hide ${name}">${name}${hot ? `<b>${hot}</b>` : ""}</button>`;
+      return `<button class="chip${flashing(k) ? " alert" : ""}" data-k="${k}" aria-pressed="${!state.hidden.has(k)}" title="${flashing(k) ? `New important ${name} headline - click to dismiss` : `Show or hide ${name}`}">${name}${hot ? `<b>${hot}</b>` : ""}</button>`;
     }).join("");
   }
   function renderSchedule() {
@@ -187,11 +186,10 @@
       const ids = new Set(), fresh = new Set(), newHot = [];
       for (const [k, name] of MARKETS) for (const h of data.commodities?.[k] || []) {
         ids.add(h.id);
-        if (state.seen && !state.seen.has(h.id)) { fresh.add(h.id); if (h.hot) { state.alertUntil[k] = Date.now() + FLASH_MS; if (!state.hidden.has(k)) newHot.push([name, h]); } }
+        if (state.seen && !state.seen.has(h.id)) { fresh.add(h.id); if (h.hot) { state.alerts.add(k); if (!state.hidden.has(k)) newHot.push([name, h]); } }
       }
       state.data = data; state.seen = ids;
       render(fresh); renderStatus(); alertFor(newHot);
-      if (fresh.size) setTimeout(render, FLASH_MS + 500);   // clear the flashing once it has run its course
     } catch {
       $("dot").className = "dot stale";
       $("status").textContent = state.data ? "connection lost · retrying" : "no data yet · waiting for the first feed run";
@@ -202,8 +200,14 @@
   const press = (id, on) => $(id).setAttribute("aria-pressed", on);
   $("chips").addEventListener("click", (e) => {
     const k = e.target.closest(".chip")?.dataset.k; if (!k) return;
-    state.hidden.has(k) ? state.hidden.delete(k) : state.hidden.add(k);
+    // a flashing chip: the click acknowledges the alert (and reveals the column) instead of hiding it
+    if (state.alerts.delete(k)) state.hidden.delete(k);
+    else state.hidden.has(k) ? state.hidden.delete(k) : state.hidden.add(k);
     store.set("hidden", [...state.hidden]); render();
+  });
+  $("board").addEventListener("click", (e) => {
+    const k = e.target.closest(".col-head.alert")?.parentElement.dataset.k;
+    if (k && state.alerts.delete(k)) render();
   });
   $("hotOnly").onclick = () => { state.hotOnly = !state.hotOnly; store.set("hotOnly", state.hotOnly); press("hotOnly", state.hotOnly); render(); };
   $("sound").onclick = () => { state.sound = !state.sound; store.set("sound", state.sound); press("sound", state.sound); if (state.sound) beep(); };
